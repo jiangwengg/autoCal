@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>自定义执行</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style>
+		.my-input-form{
+			width: 40%;
+			margin: auto;
+			margin-top: 50px;
+		}
+	</style>
+</head>
+<body>
+	<div class="layui-layout layui-layout-admin">
+		<form class="layui-form my-input-form" action="" onsubmit="return false;">
+			<div class="layui-form-item">
+				<label class="layui-form-label">工况</label>
+				<div class="layui-input-block">
+					<select id="condition" name="condition" lay-filter="con">
+						<option value="">请选择工况</option>
+					</select>
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<label class="layui-form-label">条目</label>
+				<div class="layui-input-block">
+					<select id="entry" name="entry">
+					</select>
+				</div>
+			</div>
+			<div class="layui-form-item">
+  		  <div class="layui-input-block">
+  		    <button id="run" class="layui-btn">执行条目</button>
+  		    <button id="runNlog" class="layui-btn">执行并记录</button>
+  		  </div>
+  		</div>
+		</form>
+	</div>
+</body>
+<script type="text/javascript">
+layui.use(['layer', 'form'], function(){
+  var layer = layui.layer;
+  var form = layui.form;
+  form.render();
+
+  var conList = []
+  //页面打开后获取全部工况和条目的内容，存储为js对象
+  $.getJSON('/manager/getCondition', function(data) {
+  	conList = data;
+  	//遍历方式获取所有条目，拼装JSON对象
+  	for (var x = 0; x < conList.length; x++) {
+  		(function (i) {
+				$.getJSON('/manager/getEntries/' + conList[i].id, function(data) {
+  				conList[i].entries = data;
+  			});
+  		})(x);
+  	}
+  	//进行select内容的填充和关联事件的绑定
+  	var html = '';
+  	for (var x = 0; x < conList.length; x++) {
+  		html += '<option value="' + conList[x].id + '">' + conList[x].c_name + '</option>'
+  	}
+  	$('#condition').append(html);
+  	form.render();
+  	//进行一级选项选择的事件绑定
+  	form.on('select(con)', function(data) {
+  		//找到对应的工况，将内容填充到二级选项框
+  		for (var x = 0; x < conList.length; x++) {
+  			if (conList[x].id == data.value) {
+  				var html = '<option value="">请选择条目</option>';
+  				for (var y = 0; y < conList[x].entries.length; y++) {
+  					html += '<option value="' + conList[x].entries[y].id + '">序号: ' + (conList[x].entries[y].seq + 1) + '</option>'
+  				}
+  				$('#entry').html(html);
+  			}
+  		}
+  		form.render();
+  	});
+
+  	//好了，接下来绑定按钮的事件就好啦！
+  	$('#run').click(function() {
+      if (!($('#condition').val() && $('#entry').val())) {
+        layer.msg('请先选择需执行的工况与条目');
+        return;
+      }
+      var loading = layer.load();
+  		$.post('/work/runTheOne', {
+  			conId : $('#condition').val(),
+  			entry : $('#entry').val(),
+  			mode : 'run'
+  		}, function(data) {
+  			if (data.msg == 'ok') {
+          layer.close(loading);
+          //切换到运行模式
+          $('#toRunMode', window.parent.document).trigger('click');
+        } else {
+          layer.msg('无法运行工况，是否有工况正在运行');
+          layer.close(loading);
+        }
+  		}, 'json');
+  	});
+  	$('#runNlog').click(function() {
+      if (!($('#condition').val() && $('#entry').val())) {
+        layer.msg('请先选择需执行的工况与条目');
+        return;
+      }
+      var loading = layer.load();
+  		$.post('/work/runTheOne', {
+  			conId : $('#condition').val(),
+  			entry : $('#entry').val(),
+  			mode : 'run&log'
+  		}, function(data) {
+  			if (data.msg == 'ok') {
+          layer.close(loading);
+          //切换到运行模式
+          $('#toRunMode', window.parent.document).trigger('click');
+        } else {
+          layer.msg('无法运行工况，是否有工况正在运行');
+          layer.close(loading);
+        }
+  		}, 'json');
+  	});
+  });
+});
+</script>
+</html>

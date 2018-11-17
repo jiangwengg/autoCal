@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="./layui/css/layui.css">
+	<script src="./js/jquery-1.8.2.min.js"></script>
+	<script src="./layui/layui.js"></script>
+	<script src="./js/app.js"></script>
+</head>
+<body class="layui-layout-body">
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header">
+			<a class="my-menu-2" ref="./html/mainFrame.html"><div class="layui-logo">自动标定系统</div></a>
+			<!-- 头部区域（可配合layui已有的水平导航） -->
+			<ul id="headMenu" class="layui-nav layui-layout-left">
+				<li class="layui-nav-item layui-this"><a class="my-menu-1" submenu="1">软件功能</a></li>
+				<li class="layui-nav-item"><a class="my-menu-1" submenu="2">环境设置</a></li>
+				<li class="layui-nav-item"><a onclick="toControl()">控制台</a></li>
+			</ul>
+		</div>
+		<!-- 左侧导航栏 -->
+		<div id="leftMenu" class="layui-side layui-bg-black">
+			<div class="layui-side-scroll submenu" menu-id="1" style="display: block;">
+				<ul class="layui-nav layui-nav-tree">
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/run.html">工况执行</a></li>
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/runTheOne.html">自定义执行</a></li>
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/records.html">执行记录</a></li>
+				</ul>
+			</div>
+			<div class="layui-side-scroll submenu" menu-id="2" hidden="hidden" style="display: block;">
+				<ul class="layui-nav layui-nav-tree">
+					
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/varDefine_input.html">输入参数设置</a></li>
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/varDefine_output.html">输出参数设置</a></li>
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/conditionDefine.html">工况设置</a></li>
+					<li class="layui-nav-item"><a class="my-menu-2" ref="./html/globalEntry.html">全局工况设置</a></li>
+				</ul>
+			</div>
+		</div>
+		<div class="layui-body">
+			<!-- 内容主体区域 -->
+			<iframe id="my-body" src="./html/mainFrame.html" style="height:99%; width:100%;border:0;"></iframe>
+		</div>
+
+		<div class="layui-footer">
+			<!-- 底部固定区域 -->
+			2006-2018 @Copyright 六线速云有限公司
+		</div>
+	</div>
+	<script type="text/javascript">
+		initPage();
+		initEvent();
+
+		function initPage() {
+			//页面打开时自动打开控制台
+			//window.open('./html/controlPanel.html', '_blank');
+			//按钮的事件绑定
+			layui.use('element', function (element) {
+				var element = element;
+				element.render();
+			});
+			var showMenu = $('.layui-this').find('a').attr('submenu');
+			var submenus = $('.submenu').hide();
+			for (var x = 0; x < submenus.length; x++) {
+				if ($(submenus[x]).attr('menu-id') == showMenu) {
+					$(submenus[x]).show();
+				}
+			}
+			
+		}
+		
+		function initEvent() {
+			$('.my-menu-1').click(function() {
+				var showMenu = $(this).attr('submenu');
+				var submenus = $('.submenu').hide();
+				for (var x = 0; x < submenus.length; x++) {
+					if ($(submenus[x]).attr('menu-id') == showMenu) {
+						$(submenus[x]).show();
+					}
+				}
+			});
+			  
+			$('.my-menu-2').click(function() {
+				$('#my-body').attr('src', $(this).attr('ref'));
+			});
+		}
+
+		function toControl() {
+			//打开控制台
+			window.open('./html/controlPanel.html', '_blank');
+		}
+	</script>
+</body>
+</html>

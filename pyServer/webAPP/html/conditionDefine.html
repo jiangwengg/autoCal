@@ -1,0 +1,260 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+		.layui-input {
+			width: 200px;
+		}
+		.layui-form-select .layui-edge {
+			right: -100px;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header" style="background:#fff;">
+			<div class="layui-btn-container" style="padding-top:11px; text-align: right;">
+				<button class="layui-btn" onclick="create()">新增工况</button> 
+			</div>
+		</div>
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>序号</th>
+					<th>id</th>
+					<th>工况名称</th>
+					<th>操作</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+		<!-- 弹出层菜单 -->
+		<div id="my-card" class="layui-card" hidden="hidden">
+			<div class="layui-card-header">编辑工况会删除其下所有的条目！</div>
+			<div class="layui-card-body">
+			  <form class="layui-form" action="" id="my-form" lay-filter="my-form" onsubmit="return false;">
+			  	<input type="hidden" name="id" id="id" value="">
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">中文名称：</label>
+			        <div class="layui-input-block">
+			          <input id="c_name" type="text" name="c_name" lay-verify="required" placeholder="工况中文名" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-form-item">
+			    	<label class="layui-form-label">相关变量</label>
+			    	<div class="layui-input-block" id="c_box">
+			    	</div>
+			    </div>
+			    <div class="layui-form-item">
+			      <div class="layui-input-block">
+			        <button class="layui-btn" lay-submit lay-filter="my-submit">保存</button>
+			      </div>
+			    </div>
+			  </form>
+			</div>
+    	</div>
+
+    	<!-- 创建用菜单 -->
+    	<div id="my-card-2" class="layui-card" hidden="hidden">
+			<div class="layui-card-header">工况定义</div>
+			<div class="layui-card-body">
+			  <form class="layui-form" action="" id="my-form" lay-filter="my-form" onsubmit="return false;">
+			  	<input type="hidden" name="id" id="id" value="">
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">中文名称：</label>
+			        <div class="layui-input-block">
+			          <input id="c_name" type="text" name="c_name" lay-verify="required" placeholder="工况中文名" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-form-item">
+			      <div class="layui-input-block">
+			        <button class="layui-btn" lay-submit lay-filter="my-submit-2">保存</button>
+			      </div>
+			    </div>
+			  </form>
+			</div>
+    	</div>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer', 'form'], function(layer, form) {
+			var layer = layer;
+			var from = form;
+
+			window.layIndex;
+
+			var output_var = [];
+
+			initPage();
+			//获取数据库中全部的自定义变量
+			function initPage() {
+				var loading = layer.load();
+				//首先加载系统中所有输出变量的信息
+				$.getJSON('/manager/getVar_all/0', function(data) {
+					output_var = data;
+					var html = '';
+					for (var x = 0; x < output_var.length; x++) {
+						html += '<input type="checkbox" id="checkbox_' + output_var[x].id + '" class="checkbox_class" name="' + output_var[x].id + '" title="' + output_var[x].c_name + '" lay-skin="primary">'
+					}
+					document.getElementById('c_box').innerHTML = html;
+					form.render();
+					$.getJSON('/manager/getCondition', function(data) {
+						var html = '';
+						for (var x = 0; x < data.length; x++) {
+							html += '<tr>';
+							html += '<td>' + (x + 1) + '</td>';
+							html += '<td>' + data[x].id + '</td>';
+							html += '<td>' + data[x].c_name + '</td>';
+							html += '<td>';
+							html += '<div class="layui-btn-container">';
+							html += '<button class="layui-btn" onclick="editThis(' + data[x].id + ')">编辑工况</button>';
+							html += '<button class="layui-btn" onclick="editEntry(' + data[x].id + ')">编辑条目</button>';
+							html += '<button class="layui-btn" onclick="deleteThis(' + data[x].id + ')">删除</button>';
+							html += '</div>';
+							html += '</td>';
+							html += '</tr>';
+						}
+						document.getElementById('data-table').innerHTML = html;
+						layer.close(loading);
+					});
+				});
+			}
+
+			function initTable() {
+				var loading = layer.load();
+				$.getJSON('/manager/getCondition', function(data) {
+					var html = '';
+					for (var x = 0; x < data.length; x++) {
+						html += '<tr>';
+						html += '<td>' + data[x].id + '</td>';
+						html += '<td>' + data[x].c_name + '</td>';
+						html += '<td>';
+						html += '<div class="layui-btn-container">';
+						html += '<button class="layui-btn" onclick="editThis(' + data[x].id + ')">编辑工况</button>';
+						html += '<button class="layui-btn" onclick="editEntry(' + data[x].id + ')">编辑条目</button>';
+						html += '<button class="layui-btn" onclick="deleteThis(' + data[x].id + ')">删除</button>';
+						html += '</div>';
+						html += '</td>';
+						html += '</tr>';
+					}
+					document.getElementById('data-table').innerHTML = html;
+					layer.close(loading);
+				});
+			}
+
+			//删除一个变量的方法
+			window.editThis = function(id) {
+				//先从后台获取本变量基本信息并填充
+				$.getJSON('/manager/getCondition/' + id, function(data) {
+					$('#my-form')[0].reset();
+					var checks = $('.checkbox_class');
+					for (var x = 0; x < checks.length; x++) {
+						checks[x].removeAttribute('checked');
+					}
+					for (var x = 0; x < data.var.length; x++) {
+						$('#checkbox_' + data.var[x].var_id).attr('checked', 'checked');
+					}
+					app.JSON2Form(data.con, $('#my-form')[0]);
+					form.render();
+					layIndex = layer.open({
+						type : 1,
+						content : $('#my-card'),
+						closeBtn : 1,
+						shadeClose : true,
+						title : false,
+						btn : false,
+						area : '450px',
+						offset: '100px'
+					});
+				})
+			}
+
+			//编辑一个变量的方法
+			window.deleteThis = function(id) {
+				//先询问后删除
+				layIndex = layer.confirm('确认删除该工况？', {
+					btn: ['确认','取消']
+					}, function(){
+						$.getJSON('/manager/delCondition/' + id, function(data) {
+							if (data.msg == 'ok') {
+								initTable();
+								layer.close(layIndex);
+							}
+						});
+					}, function(){
+						
+					}
+				);
+
+			}
+
+			//新建一个变量的方法
+			window.create = function() {
+				//清空表单，打开窗口
+				$('#id').val('');
+				$('#c_name').val('');
+				layIndex = layer.open({
+					type : 1,
+					content : $('#my-card-2'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					offset: '100px'
+				});
+			}
+
+			//进入工况内容编辑页面
+			window.editEntry = function(id) {
+				window.location.href = "./entryDefine.html?id=" + id;
+			}
+
+			//表单提交事件
+			form.on('submit(my-submit-2)', function(data) {
+				var url = '/manager/createCondition';
+				$.post(url, data.field, function(data) {
+					layer.close(layIndex);
+					if (data.msg == 'ok') {
+						initTable();
+					} else {
+						layer.msg('系统错误');
+					}
+				}, 'json');
+			});
+
+			//表单提交事件
+			form.on('submit(my-submit)', function(data) {
+				var url = '/manager/modifyCondition';
+				$.post(url, data.field, function(data) {
+					layer.close(layIndex);
+					if (data.msg == 'ok') {
+						initTable();
+					} else {
+						layer.msg('系统错误');
+					}
+				}, 'json');
+			});
+		})
+	</script>
+	</body>
+</html>

@@ -1,0 +1,91 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+		.layui-input {
+			width: 200px;
+		}
+		.layui-form-select .layui-edge {
+			right: -100px;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>序号</th>
+					<th>工况名称</th>
+					<th>操作</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer'], function(layer) {
+			var layer = layer;
+
+			initPage();
+			//获取数据库中全部的自定义变量
+			function initPage() {
+				var loading = layer.load();
+				$.getJSON('/manager/getCondition', function(data) {
+					var html = '';
+					for (var x = 0; x < data.length; x++) {
+						html += '<tr>';
+						html += '<td>' + (x + 1) + '</td>';
+						html += '<td>' + data[x].c_name + '</td>';
+						html += '<td>';
+						html += '<div class="layui-btn-container">';
+						html += '<button class="layui-btn" onclick="runThis(' + data[x].id + ')">执行</button>';
+						html += '<button class="layui-btn" onclick="runThis(' + data[x].id + ', true)">执行并保存记录文件</button>';
+						html += '</div>';
+						html += '</td>';
+						html += '</tr>';
+					}
+					document.getElementById('data-table').innerHTML = html;
+					layer.close(loading);
+				});
+			}
+
+			window.runThis = function(id, is_log) {
+				var loading = layer.load();
+				var url;
+				if (is_log) {
+					url = '/work/runAndLog/'
+				} else {
+					url = '/work/run/'
+				}
+				$.getJSON(url + id, function(data) {
+					if (data.msg == 'ok') {
+						layer.close(loading);
+						//切换到运行模式
+						$('#toRunMode', window.parent.document).trigger('click');
+					} else {
+						layer.msg('无法运行工况，是否有工况正在运行');
+						layer.close(loading);
+					}
+				});
+			}
+		});
+	</script>
+	</body>
+</html>

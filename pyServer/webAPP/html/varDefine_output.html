@@ -1,0 +1,222 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+		.layui-input {
+			width: 200px;
+		}
+		.layui-form-select .layui-edge {
+			right: -100px;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header" style="background:#fff;">
+			<div class="layui-btn-container" style="padding-top:11px; text-align: right;">
+				<button class="layui-btn" onclick="create()">新增变量</button> 
+			</div>
+		</div>
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>序号</th>
+					<th>id</th>
+					<th>中文名</th>
+					<th>英文名</th>
+					<th>链接参数</th>
+					<th>阈值最小</th>
+					<th>阈值最大</th>
+					<th>操作</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+		<!-- 弹出层菜单 -->
+		<div id="my-card" class="layui-card" hidden="hidden">
+			<div class="layui-card-header">自定义变量</div>
+			<div class="layui-card-body">
+			  <form class="layui-form" action="" id="my-form" lay-filter="my-form" onsubmit="return false;">
+			  	<input type="hidden" name="id" id="id" value="">
+			  	<input type="text" hidden="hidden" id="is_input" name="is_input" value="0">
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">中文名称：</label>
+			        <div class="layui-input-block">
+			          <input id="c_name" type="text" name="c_name" lay-verify="required" placeholder="变量中文名" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">英文名称：</label>
+			        <div class="layui-input-block">
+			          <input id="e_name" type="text" name="e_name" lay-verify="required" placeholder="变量英文名" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">链接参数：</label>
+			        <div class="layui-input-block">
+			          <input id="code" type="text" name="code" lay-verify="required" placeholder="dll文件链接参数" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">阈值最小：</label>
+			        <div class="layui-input-block">
+			          <input id="min_value" type="text" name="min_value" placeholder="参数可输出的最小值" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">阈值最大：</label>
+			        <div class="layui-input-block">
+			          <input id="max_value" type="text" name="max_value" placeholder="参数可输出的最大值" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-form-item">
+			      <div class="layui-input-block">
+			        <button class="layui-btn" lay-submit lay-filter="my-submit">保存</button>
+			      </div>
+			    </div>
+			  </form>
+			</div>
+    	</div>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer', 'form'], function(layer, form) {
+			var layer = layer;
+			var from = form;
+
+			form.render();
+
+			window.layIndex;
+
+			initTable();
+			//获取数据库中全部的自定义变量
+			function initTable() {
+				var loading = layer.load();
+				$.getJSON('/manager/getVar_all/0', function(data) {
+				var html = '';
+				for (var x = 0; x < data.length; x++) {
+					html += '<tr>';
+					html += '<td>' + (x + 1) + '</td>';
+					html += '<td>' + data[x].id + '</td>';
+					html += '<td>' + data[x].c_name + '</td>';
+					html += '<td>' + data[x].e_name + '</td>';
+					html += '<td>' + data[x].code + '</td>';
+					html += '<td>' + data[x].min_value + '</td>';
+					html += '<td>' + data[x].max_value + '</td>';
+					html += '<td>';
+					html += '<div class="layui-btn-container">';
+					html += '<button class="layui-btn" onclick="editThis(' + data[x].id + ')">编辑</button>';
+					html += '<button class="layui-btn" onclick="deleteThis(' + data[x].id + ')">删除</button>';
+					html += '</div>';
+					html += '</td>';
+					html += '</tr>';
+				}
+				document.getElementById('data-table').innerHTML = html;
+				layer.close(loading);
+			});
+			}
+
+			//删除一个变量的方法
+			window.editThis = function(id) {
+				//先从后台获取本变量基本信息并填充
+				$.getJSON('/manager/getVar/' + id, function(data) {
+					app.JSON2Form(data, $('#my-form')[0]);
+					form.render();
+					layIndex = layer.open({
+						type : 1,
+						content : $('#my-card'),
+						closeBtn : 1,
+						shadeClose : true,
+						title : false,
+						btn : false,
+						area : '450px',
+						offset: '100px'
+					});
+				})
+			}
+
+			//编辑一个变量的方法
+			window.deleteThis = function(id) {
+				//先询问后删除
+				layIndex = layer.confirm('确认删除该变量？', {
+					btn: ['确认','取消']
+					}, function(){
+						$.getJSON('/manager/deleteVar?id=' + id, function(data) {
+							if (data.msg == 'ok') {
+								layer.close(layIndex);
+								initTable();
+							} else {
+								layer.msg('使用中的变量无法删除');
+							}
+						});
+					}, function(){
+						
+					}
+				);
+			}
+
+			//新建一个变量的方法
+			window.create = function() {
+				//清空表单，打开窗口
+				$('#my-form')[0].reset();
+				$('#id').val('');
+				layIndex = layer.open({
+					type : 1,
+					content : $('#my-card'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					offset: '100px'
+				});
+			}
+
+			//表单提交事件
+			form.on('submit(my-submit)', function(data) {
+				//有id为修改，无id为新增
+				var url;
+				if (data.field.id) {
+					url = '/manager/modifyVar';
+				} else {
+					url = '/manager/createVar';
+				}
+				$.post(url, data.field, function(data) {
+					layer.close(layIndex);
+					if (data.msg == 'ok') {
+						initTable();
+					}
+					if (data.msg == 'dup') {
+						layer.msg('数据链接参数必须唯一，不可重复！');
+					}
+				}, 'json');
+			})
+		})
+	</script>
+	</body>
+</html>

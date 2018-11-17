@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<title>控制面板</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<script src="../js/socket.io.js"></script>
+	<style type="text/css">
+		#buttonGroup{
+			position: relative;
+			right: 60px;
+			top: 30px;
+			text-align: right;
+			height: 0px;
+		}
+		.checked td .layui-badge-dot{
+			background-color: #009688;
+		}
+		.conName{
+			color: #FF5722;
+		}
+		.seq{
+			color: #1E9FFF;
+		}
+		.over tr td .layui-badge-dot{
+			background-color: #666;
+		}
+	</style>
+</head>
+<body>
+	<div class="layui-layout layui-layout-admin">
+			<div class="layui-row"><!-- 两栏布局 -->
+				<div class="layui-col-md2">
+					<table class="layui-table" style="margin-top:0px">
+						<thead>
+							<tr>
+								<th>输入变量</th>
+								<th>值</th>
+							</tr>
+	  					</thead>
+						<tbody id="data-table-1">
+						</tbody>
+					</table>
+				</div>
+				<div class="layui-col-md2">
+					<table class="layui-table" style="margin-top:0px">
+						<thead>
+							<tr>
+								<th>输出变量</th>
+								<th>值</th>
+							</tr>
+	  					</thead>
+						<tbody id="data-table-2">
+						</tbody>
+					</table>
+				</div>
+				<div class="layui-col-md4">
+					<table class="layui-table" style="margin-top:0px">
+						<colgroup width="80%"></colgroup>
+						<colgroup width="20%"></colgroup>
+						<thead>
+							<tr>
+								<th>工况步骤</th>
+								<th>当前步骤</th>
+							</tr>
+	  					</thead>
+						<tbody id="step-table">
+						</tbody>
+					</table>
+				</div>
+				<div class="layui-col-md4">
+					<fieldset class="layui-elem-field">
+						<!-- 绝对定位按钮组 -->
+						<div class="layui-btn-container" id="buttonGroup">
+							<button class="layui-btn" onclick="clearLog()">清空log</button>
+							<button id="pause_btn" class="layui-btn" onclick="pause()">暂停执行</button>
+							<button class="layui-btn" onclick="stop()">停止执行</button>
+						</div>
+						<!-- 标题与log内容 -->
+						<legend>系统运行记录</legend>
+						<div class="layui-field-box" id="logger_container" style="overflow-y: auto;box-sizing: border-box;">
+						</div>
+					</fieldset>
+				</div>
+			</div>
+	</div>
+	</body>
+<script type="text/javascript">
+	var socket = io.connect('http://localhost:5000/ws');
+
+	//logger展示功能
+	socket.on('logger', function(msg) {
+	    $('#logger_container').prepend(msg.data + '<br />')
+	});
+
+	//工况步骤的webSocket编程，实现思路：
+	//如存在新工况flag，则清空步骤表与对象
+	//查看对象是否存在步骤记录，如存在则移动箭头
+	//如果不存在则向后台申请stepList，之后拼装表格，移动箭头
+	//后台data如下
+	//conId : x,
+	//entry: x
+	var stepData = {};
+	socket.on('refrashStep', function() {
+		stepData = {};
+		$('#step-table').html('');
+		$($('#step-table')[0]).removeClass('over');
+	})
+	socket.on('stepNotice', function(data) {
+		//下一步，根据传来的Data，查看前端的工况对象是否存在
+		//不存在则加载工况与条目，显示在当前内容区域
+		if (!stepData[data.conId]) {
+			//通过Ajax方式获取工况信息，填充进入对象及表格
+			var conId = data.conId
+			var entry = data.entry
+			var conName = data.conName;
+			$.getJSON('/manager/getEntries/' + data.conId, function(data) {
+				//双重判断，如果此时工况信息仍然未被获得，则处理对象和表格，如果以获得则跳过
+				if (!stepData[conId]) {
+					stepData[conId] = {
+						id : conId,
+						name : conName,
+						entries : data
+					}
+					//进行JSON填充和表格绘制;
+					//此处需要考虑到工况嵌套的情况，即是填充位置需要考虑
+					var html = ''
+					for (var x = 0; x < data.length; x++) {
+						html += '<tr id="' + conId + '_' + data[x].id +'">'
+						html += '<td>'
+						html += '<span class="conName">' + conName + '</span> 序列号: <span class="seq">' + (data[x].seq + 1) + '</span>'
+						html += '</td>'
+						html += '<td>'
+						html += '<span class="layui-badge-dot"></span>'
+						html += '</td>'
+						html += '</tr>'
+					}
+					//如果存在check元素，则在check元素下插入，且将当前元素设置为check。
+					if ($('.checked').length) {
+						//在其下插入DOM
+						$($('.checked')[0]).after(html);
+						$($('.checked')[0]).removeClass('checked');
+						$('#' + conId + '_' + entry).addClass('checked');
+					} else {
+						//如果不存在，则在根表格中插入，且将当前元素设置为check。
+						$('#step-table').html(html);
+						var trs = $('#step-table').children();
+						$(trs[0]).addClass('checked')
+					}
+				}
+			})
+		} else {
+			//既然对象已经存在，那么只需移动表格中箭头的位置即可
+			$($('.checked')[0]).removeClass('checked');
+			$('#' + data.conId + '_' + data.entry).addClass('checked');
+		}
+	});
+
+	socket.on('stepEnd', function() {
+		$($('.checked')[0]).removeClass('checked');
+		$($('#step-table')[0]).addClass('over');
+	})
+
+	//设置显示区高度
+	$('#logger_container').css('height', window.innerHeight - 100);
+	//变量刷新代码块
+	$.getJSON('/work/frontInterval', function(data) {
+		setInterval(function() {
+			$.getJSON('/work/showAll', function(data) {
+				var html = '';
+				for (var x = 0; x < data.input.length; x++) {
+					html += '<tr>';
+					html += '<td>' + data.input[x].name + '</td><td>' + data.input[x].value + '</td>';
+					html += '</tr>';
+				}
+				document.getElementById('data-table-1').innerHTML = html;
+				html = '';
+				for (var x = 0; x < data.output.length; x++) {
+					html += '<tr>';
+					html += '<td>' + data.output[x].name + '</td><td>' + data.output[x].value + '</td>';
+					html += '</tr>';
+				}
+				document.getElementById('data-table-2').innerHTML = html;
+			})
+		}, data);
+	});
+
+	function clearLog() {
+		$('#logger_container').html('');
+	}
+
+	layui.use(['layer'], function(layer) {
+		var layer = layer;
+
+		window.pause = function() {
+			var loading = layer.load();
+			$.getJSON('/work/pause_resume', function(data) {
+				if(data.status == 'pause') {
+					$('#pause_btn').html('继续执行')
+					$('#pause_btn').toggleClass('layui-btn-danger')
+				} else {
+					$('#pause_btn').html('暂停执行')
+					$('#pause_btn').toggleClass('layui-btn-danger')
+				}
+				layer.close(loading);
+			});
+		}
+
+		window.stop = function() {
+			var loading = layer.load();
+			$.getJSON('/work/stop', function(data) {
+				if(data.msg == 'ok') {
+					layer.close(loading);
+				} else {
+					layer.msg('系统异常')
+				}
+			});
+		}
+	})
+	</script>
+</html>

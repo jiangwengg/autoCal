@@ -1,0 +1,369 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 80px;
+			padding-right: 80px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+		.layui-input {
+			width: 200px;
+		}
+		.layui-textarea {
+			width: 200px;
+			text-align: left;
+		}
+		.layui-form-select {
+			width: 200px;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header" style="background:#fff;">
+			<div class="layui-btn-container" style="padding-top:11px; text-align: right;">
+				<button class="layui-btn" onclick="help()">帮助</button>
+				<button class="layui-btn" onclick="create()">创建全局工况</button>
+			</div>
+		</div>
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>序号</th>
+					<th>工况名称</th>
+					<th>刷新频率</th>
+					<th>脚本</th>
+					<th>输入变量</th>
+					<th>判断表达式</th>
+					<th>输出变量</th>
+					<th>赋值表达式</th>
+					<th>操作</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+		<!-- 弹出层菜单 -->
+		<div id="my-card" class="layui-card" hidden="hidden">
+			<div class="layui-card-header">全局工况</div>
+			<div class="layui-card-body">
+			  <form class="layui-form" action="" id="my-form" lay-filter="my-form" onsubmit="return false;">
+			  	<!-- 修改时保存Id -->
+			  	<input type="hidden" name="id" id="id" value="">
+			  	<input type="hidden" name="open" id="open" value="1">
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">工况名称：</label>
+			        <div class="layui-input-block">
+			          <input id="c_name" type="text" name="c_name" lay-verify="required" placeholder="中文名" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">刷新频率：</label>
+			        <div class="layui-input-block">
+			          <input id="multiple" type="text" name="multiple" lay-verify="required" placeholder="刷新频率" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">自定义脚本：</label>
+			        <div class="layui-input-block">
+			          <textarea id="code" name="code" placeholder="执行脚本" class="layui-textarea" autocomplete="off"></textarea>
+			        </div>
+			      </div>
+			    </div>
+				<div class="layui-form-item">
+					<label class="layui-form-label">输入变量 :</label>
+					<div class="layui-input-block">
+						<select id="input_var" name="input_var" lay-search>
+							<option value="">请选择</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">判断表达式：</label>
+			        <div class="layui-input-block">
+			          <input id="input_code" type="text" name="input_code" placeholder="判断表达式" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-form-item">
+					<label class="layui-form-label">输出变量 :</label>
+					<div class="layui-input-block">
+						<select id="output_var" name="output_var" lay-search>
+							<option value="">请选择</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">赋值表达式：</label>
+			        <div class="layui-input-block">
+			          <input id="output_code" type="text" name="output_code" placeholder="赋值表达式" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-form-item">
+			      <div class="layui-input-block">
+			        <button class="layui-btn" lay-submit lay-filter="my-submit">保存</button>
+			      </div>
+			    </div>
+			  </form>
+			</div>
+    	</div>
+    	<!-- 变量赋值规则，系统内说明 -->
+    	<div id="my-card-2" class="layui-card" hidden="hidden">
+    		<div class="layui-card-header">全局工况示例</div>
+    		<div class="layui-card-body">
+    			输入变量判断表达式<br />
+    			> 2.33 : 输入变量大于2.33<br />
+    			>= 2.33: 输入变量大于或等于2.33<br />
+    			== 2.33: 输入变量等于2.33<br />
+    			< 2.33 : 输入变量小于2.33<br />
+    			输出变量赋值表达式<br />
+    			=2.33  : 将变量赋值为2.33<br />
+    			=-2.33 : 将变量赋值为-2.33<br />
+    			+2.33  : 将变量当前值增加2.33<br />
+    			-2.33  : 将变量当前值减少2.33<br />
+    			注意 ： 脚本优先于判断赋值运行<br />
+    			注意 ： 只有当输入变量，判断表达式，输出变量，赋值表达式均存在时。后台系统才会执行判断与赋值。<br />
+    		</div>
+    	</div>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer', 'form'], function(layer, form) {
+			var layer = layer;
+			var form = form;
+
+			//变量的对象存储
+			var outputs = {};
+			var inputs = {};
+
+			window.layIndex;
+
+			//表单提交方法
+			form.on('submit(my-submit)', function(data) {
+				var url;
+				if (data.field.id) {
+					url = '/manager/editGlobalEntry';
+				} else {
+					url = '/manager/createGlobalEntry';
+				}
+				layer.close(layIndex);
+				$.post(url, data.field, function(data) {
+					if (data.msg == 'ok') {
+						reloadList();
+					} else {
+						layer.msg('系统异常');
+					}
+				}, 'json');
+			});
+
+			initPage();
+
+			//初次打开页面时，加载输入输出变量中文名，加载全局工况条目，显示
+			function initPage() {
+				var loading = layer.load();
+				//首先，获取全部输出变量并保存，取得输出变量名称与id的关联关系
+				$.getJSON('/manager/getVar_all/0', function(data) {
+					for (var x = 0; x < data.length; x++) {
+						outputs[data[x].id] = data[x].c_name;
+					}
+					//刷新渲染Select
+					var html = '';
+					for (var key in outputs) {
+						html += '<option value="' + key + '">' + outputs[key] + '</option>';
+					}
+					$('#output_var').append(html);
+					//然后取得输入变量并保存
+					$.getJSON('/manager/getVar_all/1', function(data) {
+						for (var x = 0; x < data.length; x++) {
+							inputs[data[x].id] = data[x].c_name;
+						}
+						//刷新渲染Select
+						var html = '';
+						for (var key in inputs) {
+							html += '<option value="' + key + '">' + inputs[key] + '</option>';
+						}
+						$('#input_var').append(html);
+						form.render();
+						//获得全局工况信息并填充表格
+						$.getJSON('/manager/getGlobalEntry', function(data) {
+							var html = '';
+							for (var x = 0; x < data.length; x++) {
+								html += '<tr>';
+								html += '<td>' + (x + 1) + '</td>';
+								html += '<td>' + data[x].c_name + '</td>';
+								html += '<td>' + data[x].multiple + '</td>';
+								html += '<td>' + data[x].code + '</td>';
+								if (data[x].input_var) {
+									html += '<td>' + inputs[data[x].input_var] + '</td>';
+								} else {
+									html += '<td></td>'
+								}
+								html += '<td>' + data[x].input_code + '</td>';
+								if (data[x].output_var) {
+									html += '<td>' + outputs[data[x].output_var] + '</td>';
+								} else {
+									html += '<td></td>'
+								}
+								html += '<td>' + data[x].output_code + '</td>';
+								html += '<td>';
+								html += '<div class="layui-btn-container">';
+								if (data[x].open) {
+									html += '<button id="flip_' + data[x].id + '" class="layui-btn" onclick="filpThis(' + data[x].id + '		)">已启用</button>';
+								} else {
+									html += '<button id="flip_' + data[x].id + '" class="layui-btn layui-btn-danger" onclick="filpThis(' + 		data[x].id + ')">已禁用</button>'			;
+								}
+								html += '<button class="layui-btn" onclick="editThis(' + data[x].id + ')">编辑</button>';
+								html += '<button class="layui-btn" onclick="deleteThis(' + data[x].id + ')">删除</button>';
+								html += '</div>';
+								html += '</td>';
+							}
+							$('#data-table').html(html);
+							layer.close(loading);
+						});
+					});
+				});
+			}
+
+			//重新读取列表，刷新页面显示
+			function reloadList() {
+				var loading = layer.load();
+				$.getJSON('/manager/getGlobalEntry', function(data) {
+					var html = '';
+					for (var x = 0; x < data.length; x++) {
+						html += '<tr>';
+						html += '<td>' + (x + 1) + '</td>';
+						html += '<td>' + data[x].c_name + '</td>';
+						html += '<td>' + data[x].multiple + '</td>';
+						html += '<td>' + data[x].code + '</td>';
+						if (data[x].input_var) {
+							html += '<td>' + inputs[data[x].input_var] + '</td>';
+						} else {
+							html += '<td></td>'
+						}
+						html += '<td>' + data[x].input_code + '</td>';
+						if (data[x].output_var) {
+							html += '<td>' + outputs[data[x].output_var] + '</td>';
+						} else {
+							html += '<td></td>'
+						}
+						html += '<td>' + data[x].output_code + '</td>';
+						html += '<td>';
+						html += '<div class="layui-btn-container">';
+						if (data[x].open) {
+							html += '<button id="flip_' + data[x].id + '" class="layui-btn" onclick="filpThis(' + data[x].id + ')">已启用</button>';
+						} else {
+							html += '<button id="flip_' + data[x].id + '" class="layui-btn layui-btn-danger" onclick="filpThis(' + data[x].id + ')">已禁用</button>'			;
+						}
+						html += '<button class="layui-btn" onclick="editThis(' + data[x].id + ')">编辑</button>';
+						html += '<button class="layui-btn" onclick="deleteThis(' + data[x].id + ')">删除</button>';
+						html += '</div>';
+						html += '</td>';
+					}
+					$('#data-table').html(html);
+					layer.close(loading);
+				});
+			}
+
+			window.create = function() {
+				//清空表单，打开窗口
+				$('#id').val('');
+				$('#open').val('1');
+				$('#my-form')[0].reset();
+				layIndex = layer.open({
+					type : 1,
+					content : $('#my-card'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					offset: '100px'
+				});
+			}
+
+			window.editThis = function(id) {
+				$.getJSON('/manager/getGlobalEntryById/' + id, function(data) {
+					app.JSON2Form(data, $('#my-form')[0]);
+					form.render();
+					layIndex = layer.open({
+						type : 1,
+						content : $('#my-card'),
+						closeBtn : 1,
+						shadeClose : true,
+						title : false,
+						btn : false,
+						area : '450px',
+						offset: '100px'
+					});
+				});
+			}
+
+			window.deleteThis = function(id) {
+				//先询问后删除
+				layIndex = layer.confirm('确认删除该条目？', {
+					btn: ['确认','取消']
+					}, function(){
+						$.getJSON('/manager/delGlobalEntry/' + id, function(data) {
+							layer.close(layIndex);
+							if (data.msg == 'ok') {
+								reloadList();
+							} else {
+								layer.msg('系统异常');
+							}
+						});
+					}, function(){
+						
+					}
+				);
+			}
+
+
+			window.filpThis = function(id) {
+				var loading = layer.load();
+				$.getJSON('/manager/filpGlobalEntry/' + id,	function(data) {
+					$('#flip_' + id).toggleClass('layui-btn-danger');
+					if (data.status == 'open') {
+						$('#flip_' + id).html('已启用');
+					} else {
+						$('#flip_' + id).html('已禁用');
+					}
+					layer.close(loading);
+				});
+			}
+
+			//打开帮助弹层
+			window.help = function() {
+				var layIndex = layer.open({
+					type: 1,
+					content : $('#my-card-2'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					skin: 'layui-layer-rim', //加上边框
+					offset: '100px'
+				});
+			}
+		});
+	</script>
+	</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="./layui/css/layui.css">
+	<script src="./js/jquery-1.8.2.min.js"></script>
+	<script src="./layui/layui.js"></script>
+	<script src="./js/app.js"></script>
+	<script src="./js/socket.io.js"></script>
+	<style>
+		.innerScreen {
+			box-sizing: content-box;
+			width: 100%;
+			height: 100%;
+			border: none;
+		}
+		.layui-tab-item {
+			height: 100%;
+		}
+		.info{
+			margin: 20px;
+		}
+		.layui-nav-side {
+			top: 50px;
+		}
+		.my-logo{
+			color: #f7f7f7;
+			position: fixed;
+			height: 50px;
+			width: 200px;
+			top: 0;
+			left: 0;
+			box-sizing: content-box;
+			text-align: center;
+			line-height: 50px;
+			background: #393D49;
+		}
+		.layui-tab{
+			position: fixed;
+    	top: 0px;
+    	bottom: 44px;
+    	left: 210px;
+    	right: 0px;
+		}
+		footer{
+			position: fixed;
+			bottom: 0px;
+			left: 200px;
+			right: 0px;
+			height: 44px;
+			line-height: 44px;
+			font-size: 16px;
+			background-color: #eee;
+			padding-left: 10px;
+		}
+	</style>
+</head>
+<body onbeforeunload="return beforeClose()">
+	<div class="my-logo">
+		<span>自动标定系统</span>
+	</div>
+	<ul class="layui-nav layui-nav-tree layui-nav-side" lay-filter="my-menu">
+		<li class="layui-nav-item layui-nav-itemed">
+			<a href="javascript:;">软件功能<span class="layui-nav-more"></span></a>
+			<dl class="layui-nav-child">
+				<dd><a href="javascript:;" ref="./html/run.html">工况执行</a></dd>
+				<dd><a href="javascript:;" ref="./html/runTheOne.html">自定义执行</a></dd>
+				<dd><a href="javascript:;" ref="./html/records.html">执行记录</a></dd>
+			</dl>
+		</li>
+		<li class="layui-nav-item layui-nav-itemed">
+			<a href="javascript:;">环境设置<span class="layui-nav-more"></span></a>
+			<dl class="layui-nav-child">
+				<dd><a href="javascript:;" ref="./html/varDefine_input.html">输入参数设置</a></dd>
+				<dd><a href="javascript:;" ref="./html/varDefine_output.html">输出参数设置</a></dd>
+				<dd><a href="javascript:;" ref="./html/varImport.html">参数导入/导出</a></dd>
+				<dd><a href="javascript:;" ref="./html/conditionDefine.html">工况设置</a></dd>
+				<dd><a href="javascript:;" ref="./html/globalEntry.html">全局工况设置</a></dd>
+			</dl>
+		</li>
+		<li class="layui-nav-item layui-nav-itemed">
+			<a href="javascript:;">软件信息<span class="layui-nav-more"></span></a>
+			<dl class="layui-nav-child">
+				<dd><a href="javascript:;" ref="./html/controlPanel.html">控制面板</a></dd>
+				<dd><a href="javascript:;" ref="./html/mainFrame.html">版本信息</a></dd>
+			</dl>
+		</li>
+	</ul>
+	<div class="layui-tab" lay-allowClose="true" lay-filter="my-tab">
+		<ul class="layui-tab-title">
+			<!-- 默认选项卡为控制面板 -->
+			<li lay-id="./html/controlPanel.html" class="layui-this">控制面板</li>
+		</ul>
+		<div class="layui-tab-content" style="height: 100%">
+			<div class="layui-tab-item layui-show">
+				<iframe class="innerScreen" src="./html/controlPanel.html"></iframe>
+			</div>
+		</div>
+	</div>
+	<footer>
+		2006-2018 @Copyright 合肥六线速云信息科技有限公司
+	</footer>
+	<!-- 隐藏一个按钮，可以用来触发runMode -->
+	<button id="toRunMode" hidden="hidden" onclick="runMode()"></button>
+</body>
+<script type='text/javascript'>
+	//记录哪些Tab已经加载
+	var tabs = {
+		'./html/controlPanel.html' : 0
+	}
+
+	layui.use('element', function(){
+		var element = layui.element
+
+		//监听菜单点击，打开新的选项卡或跳转
+		element.on('nav(my-menu)', function(elem){
+			//有链接，则创建新选项卡或跳转
+			if (elem.context.getAttribute('ref')) {
+				//如果不存在该选项卡，则创建
+				if (isNaN(tabs[elem.context.getAttribute('ref')])) {
+					tabs[elem.context.getAttribute('ref')] = Object.keys(tabs).length;
+					//尝试创建新选项卡
+					element.tabAdd('my-tab', {
+						title: elem.context.innerText,
+						content: '<iframe class="innerScreen" src="' + elem.context.getAttribute('ref') + '"></iframe>',
+						id: elem.context.getAttribute('ref')
+					})
+				}
+				//切换到该选项卡
+				element.tabChange('my-tab', elem.context.getAttribute('ref'))
+			}
+		});
+
+		//监听选项卡删除，操作Tabs
+		element.on('tabDelete(my-tab)', function(data){
+			//根据index删除
+			delete tabs[Object.keys(tabs)[data.index]]
+		})
+
+		//当工况开始执行时触发runMode方法，关闭所有选项卡且只保留控制面板选项卡
+		window.runMode = function () {
+			var len = Object.keys(tabs).length;
+			var keys = Object.keys(tabs);
+			//倒序删除
+			for (var x = len - 1; x >= 0; x--) {
+				//删除不是控制面板的页面
+				if (keys[x] != './html/controlPanel.html') {
+					element.tabDelete('my-tab', keys[x]);
+					delete tabs[keys[x]]
+				}
+			}
+			//如果用户之前没有打开控制面板页面，则打开
+			if (!Object.keys(tabs).length) {
+				tabs = {
+					'./html/controlPanel.html' : 0
+				}
+				element.tabAdd('my-tab', {
+					title: '控制面板',
+					content: '<iframe class="innerScreen" src="./html/controlPanel.html"></iframe>',
+					id: './html/controlPanel.html'
+				})
+				element.tabChange('my-tab', './html/controlPanel.html')
+			}
+		}
+	})
+
+	function beforeClose() {
+		return false;
+	}
+
+	//后台服务正常么？
+	var socket = io.connect('http://localhost:5000/ws');
+
+	//后台断开提示功能
+	var layIndex = null;
+	layui.use('layer', function(layer) {
+		var layer = layer;
+
+		socket.on('connect', function () {
+			if (layIndex) {
+				layer.close(layIndex);
+			}
+		})
+	
+		socket.on('disconnect', function () {
+			layIndex = layer.open({
+				type: 1,
+				skin: 'layui-layer-demo', //样式类名
+				closeBtn: 0, //不显示关闭按钮
+				anim: 2,
+				shadeClose: false, //开启遮罩关闭
+				content: '<div class="info">后台服务器断开！</div>'
+			});
+		})
+	})
+</script>

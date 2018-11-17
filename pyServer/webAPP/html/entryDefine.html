@@ -1,0 +1,332 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+		.layui-input {
+			width: 200px;
+		}
+		.layui-form-select .layui-edge {
+			right: -100px;
+		}
+		.layui-textarea {
+			width: 200px;
+			text-align: left;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<div class="layui-header" style="background:#fff;">
+			<div class="layui-btn-container" style="padding-top:11px; text-align: right;">
+				<button class="layui-btn" onclick="goBack()">返回上一级</button>
+				<button class="layui-btn" onclick="help()">帮助</button>
+				<button class="layui-btn" onclick="create()">新增执行条目</button>
+				<button class="layui-btn" onclick="save()">保存设置</button>
+			</div>
+		</div>
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr id="data-head">
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+		<!-- 弹出层菜单 -->
+		<div id="my-card" class="layui-card" hidden="hidden">
+			<div class="layui-card-header">自定义工况条目</div>
+			<div class="layui-card-body">
+			  <form class="layui-form" action="" id="my-form" lay-filter="my-form" onsubmit="return false;">
+			  	<input type="hidden" name="seq" id="seq" value="">
+			    <div class="layui-row layui-col-space10 layui-form-item">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">执行时长：</label>
+			        <div class="layui-input-block">
+			          <input id="duration" type="text" name="duration" value="0" lay-verify="required|my_verify" placeholder="条目执行时长" autocomplete="off" class="layui-input layui-form-danger">
+			        </div>
+			      </div>
+			    </div>
+			    <div class="layui-row layui-col-space10 layui-form-item layui-form-text">
+			      <div class="layui-col-lg6">
+			        <label class="layui-form-label">自定义脚本：</label>
+			        <div class="layui-input-block">
+			        	<textarea id="code" name="code" placeholder="执行脚本" class="layui-textarea" autocomplete="off"></textarea>
+			        </div>
+			      </div>
+			    </div>
+			  </form>
+			</div>
+    	</div>
+    	<!-- 变量赋值规则，系统内说明 -->
+    	<div id="my-card-2" class="layui-card" hidden="hidden">
+    		<div class="layui-card-header">变量配置示例</div>
+    		<div class="layui-card-body">
+    			=2.33  : 将变量赋值为2.33<br />
+    			=-2.33 : 将变量赋值为-2.33<br />
+    			+2.33  : 将变量当前值增加2.33<br />
+    			-2.33  : 将变量当前值减少2.33<br />
+    		</div>
+    	</div>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer', 'form'], function(layer, form) {
+			var layer = layer;
+			var form = form;
+
+			//获取工况相关信息并缓存至页面
+			var condition_id = app.getQueryString('id');
+
+			//输出变量的对象存储
+			var outputs = {};
+
+			//定义保存全局工况条目的列表，方便在前端进行各类操作
+			var entry_list = [];
+			//window.entry_list = [];
+
+			//保存本例中所用变量
+			var outputs_used = [];
+
+			window.layIndex;
+
+			//自定义verify条件
+			form.verify({
+				my_verify : function(value, item) {
+					var time = $('#duration').val();
+					if (!new RegExp("^[0-9]*$").test(time)) {
+						return '执行时间必须为非负整数';
+					}
+				},
+				my_exp : function(value, item) {
+					if (value != '') {
+						if (!new RegExp("^=?(-|\\+)[0-9]\\.?[0-9]*$").test(value) && !new RegExp("^=?[0-9]\\.?[0-9]*$")) {
+							return '请参照变量赋值规则';
+						}
+					}
+				}
+			})
+
+			//表单提交方法
+			form.on('submit(my-submit)', function(data) {
+				var seq = data.field.seq;
+				delete data.field.seq;
+				if (seq) {
+					entry_list.splice(seq, 1, data.field);
+				} else {
+					entry_list.push(data.field);
+				}
+				layer.close(layIndex);
+				reloadList();
+			});
+
+			initPage();
+
+			//初次打开页面时，从数据库加载相应条目列表，并在前端进行展示
+			function initPage() {
+				var loading = layer.load();
+				//首先，获取全部输出变量并保存，取得输出变量名称与id的关联关系
+				$.getJSON('/manager/getVar_all/0', function(data) {
+					for (var x = 0; x < data.length; x++) {
+						outputs[data[x].id] = data[x];
+					}
+					//获得本工况信息，取得本工况和输出变量的关联关系
+					$.getJSON('/manager/getCondition/' + condition_id, function(data) {
+						//填写表头
+						var html = '';
+						html += '<td>序号</td>';
+						html += '<td>执行时长</td>';
+						html += '<td>执行脚本</td>';
+						for (var x = 0; x < data.var.length; x++) {
+							outputs_used.push(data.var[x].var_id);
+							html += '<td>' + outputs[data.var[x].var_id].c_name + '</td>';
+						}
+						html += '<td>操作</td>';
+						$('#data-head')[0].innerHTML = html;
+						//填写输入框
+						var html = '';
+						for (var x = 0; x < outputs_used.length; x++) {
+							html += '<div class="layui-row layui-col-space10 layui-form-item">';
+			      			html += '<div class="layui-col-lg6">'
+			        		html += '<label class="layui-form-label">' + outputs[outputs_used[x]].c_name + '：</label>';
+			        		html += '<div class="layui-input-block">';
+			          		html += '<input id="form_var_' + outputs[outputs_used[x]].id + '" type="text" name="' + outputs[outputs_used[x]].id + '" lay-verify="my_exp" placeholder="自定义表达式" autocomplete="off" class="layui-input layui-form-danger">';
+			        		html += '</div>';
+			      			html += '</div>';
+			    			html += '</div>';
+						}
+						html += '<div class="layui-form-item">';
+			    		html += '<div class="layui-input-block">';
+						html += '<button class="layui-btn" lay-submit lay-filter="my-submit">保存</button>';
+						html += '</div>';
+			    		html += '</div>';
+						$('#my-form').append(html);
+						//获得条目信息，用作展示
+						$.getJSON('/manager/getEntries/' + condition_id, function(data) {
+							//创建entry_list
+							for (var x = 0; x < data.length; x++) {
+								entry_list.push({
+									duration : data[x].duration,
+									code : data[x].code,
+									id : data[x].id
+								});
+							}
+							//获得条目中变量计算数据，用作展示
+							$.getJSON('/manager/getVarEntries/' + condition_id, function(data) {
+								//插入变量相关数据
+								for (var x = 0; x < data.length; x++) {
+									for (var y = 0; y < entry_list.length; y++) {
+										if (entry_list[y].id == data[x].entry_id) {
+											entry_list[y][data[x].var_id] = data[x].code
+										}
+									}
+								}
+								for (var x = 0; x < entry_list.length; x++) {
+									delete entry_list[x].id;
+								}
+								reloadList();
+								form.render();
+								layer.close(loading);
+							});
+						});
+					});
+				});
+			}
+
+			//重新读取列表，刷新页面显示
+			function reloadList() {
+				var html = '';
+				for (var x = 0; x < entry_list.length; x++) {
+					html += '<tr>';
+					html += '<td>' + (x + 1) + '</td>';
+					html += '<td>' + entry_list[x].duration + '</td>';
+					html += '<td>' + entry_list[x].code + '</td>';
+					for (var y = 0; y < outputs_used.length; y++) {
+						var var_id = outputs_used[y];
+						html += '<td>' + entry_list[x][var_id] + '</td>';
+					}
+					html += '<td>';
+					html += '<div class="layui-btn-container">';
+					html += '<button class="layui-btn" onclick="editThis(' + x + ')">编辑</button>';
+					html += '<button class="layui-btn" onclick="deleteThis(' + x + ')">删除</button>';
+					html += '<button class="layui-btn" onclick="moveThis(' + x + ')">排序</button>';
+					html += '</div>';
+					html += '</td>';
+				}
+				$('#data-table').html(html);
+			}
+
+			window.create = function() {
+				//清空表单，打开窗口
+				$('#seq').val('');
+				$('#my-form')[0].reset();
+				layIndex = layer.open({
+					type : 1,
+					content : $('#my-card'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					offset: '100px'
+				});
+			}
+
+			window.editThis = function(seq) {
+				app.JSON2Form(entry_list[seq], $('#my-form')[0]);
+				$('#code').val(entry_list[seq].code);
+				$('#seq').val(seq);
+				layIndex = layer.open({
+					type : 1,
+					content : $('#my-card'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					offset: '100px'
+				});
+			}
+
+			window.deleteThis = function(seq) {
+				//先询问后删除
+				layIndex = layer.confirm('确认删除该条目？', {
+					btn: ['确认','取消']
+					}, function(){
+						entry_list.splice(seq, 1);
+						reloadList();
+						layer.close(layIndex);
+					}, function(){
+						
+					}
+				);
+			}
+
+			window.save = function() {
+				var loading = layer.load();
+				$.post('/manager/saveEntries/' + condition_id, { 'list' : entry_list}, function(data) {
+					if (data.msg == 'ok') {
+						layer.msg('保存成功');
+					} else {
+						layer.msg('系统错误');
+					}
+					layer.close(loading);
+				}, 'json');
+			}
+
+			//打开帮助弹层
+			window.help = function() {
+				var layIndex = layer.open({
+					type: 1,
+					content : $('#my-card-2'),
+					closeBtn : 1,
+					shadeClose : true,
+					title : false,
+					btn : false,
+					area : '450px',
+					skin: 'layui-layer-rim', //加上边框
+					offset: '100px'
+				});
+			}
+
+			window.moveThis = function(x) {
+				layer.prompt({
+					title: '新序号',
+					value: x + 1
+				}, function(val, index){
+					if (val < 1 || val > entry_list.length) {
+						layer.msg('序号需大于0且小于' + entry_list.length);
+					} else {
+						//取出x位置的值
+						val = val - 1;
+						var objX = app.deepClone(entry_list[x]);
+						var objV = app.deepClone(entry_list[val]);
+						entry_list[x] = objV;
+						entry_list[val] = objX;
+						console.log(entry_list);
+						reloadList();
+					}
+				  layer.close(index);
+				});
+			}
+
+			window.goBack = function() {
+				history.go(-1);
+			}
+		});
+	</script>
+	</body>
+</html>

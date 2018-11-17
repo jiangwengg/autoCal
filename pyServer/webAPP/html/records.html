@@ -1,0 +1,64 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>自动标定系统</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		*{
+			text-align: center;
+		}
+		.layui-layout {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+		.layui-table th {
+    		text-align: center;
+		}
+	</style>
+</head>
+	<body>
+	<div class="layui-layout layui-layout-admin">
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>记录时间</th>
+					<th>操作</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+	</div>
+	<script type="text/javascript">
+		layui.use(['layer'], function(layer) {
+			var layer = layer;
+
+			initPage();
+			//获取数据库中全部的自定义变量
+			function initPage() {
+				var loading = layer.load();
+				$.getJSON('/work/getRecords', function(data) {
+					var html = '';
+					for (var x = 0; x < data.length; x++) {
+						html += '<tr>';
+						html += '<td>' + data[x] + '</td>';
+						html += '<td>';
+						html += '<button class="layui-btn" onclick="showThis(\'' + data[x] + '\')">查看记录</button>';
+						html += '</td>';
+						html += '</tr>';
+					}
+					document.getElementById('data-table').innerHTML = html;
+					layer.close(loading);
+				});
+			}
+
+			window.showThis = function(path) {
+				window.open('./showRecord.html?path=' + path, '_blank');
+			}
+		});
+	</script>
+	</body>
+</html>

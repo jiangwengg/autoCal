@@ -1,0 +1,70 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>历史记录</title>
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../js/echarts.common.min.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+	</style>
+</head>
+	<body>
+		<div id="eCharts-container" style="width:100%;height:100%"></div>
+	<script type="text/javascript">
+		filePath = app.getQueryString('path')
+		$.getJSON('/work/getRecord/' + filePath, function(data) {
+			var var_names = data.baseInfo.var_names;
+			var myChart = echarts.init(document.getElementById('eCharts-container'));
+			var option = { 
+				tooltip: {trigger: 'axis'},
+				grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+				toolbox: {
+				    feature: {
+				        saveAsImage: {}
+				    }
+				},
+				yAxis: { type: 'value'}
+			};
+			//图表标题
+			option.title = {text : filePath + ' 执行记录', subtext : '基础刷新频率: ' + data.baseInfo.interval + 'S'};
+			//图表内容项目
+			var legend_data = []
+			for (var x = 0; x < data.data[0].input_vars.length; x++) {
+				legend_data.push(var_names[Object.keys(data.data[0].input_vars[x])[0]])
+			}
+			for (var x = 0; x < data.data[0].output_vars.length; x++) {
+				legend_data.push(var_names[Object.keys(data.data[0].output_vars[x])[0]])
+			}
+			option.legend = {data : legend_data}
+			//图标横坐标集合
+			var xAxis_data = []
+			for (var x = 0; x < data.data.length; x++) {
+				xAxis_data.push(x)
+			}
+			option.xAxis = {
+				type: 'category',
+				boundaryGap: false,
+				data: xAxis_data
+			}
+			//填充数据
+			var series_data = []
+			for (var x = 0; x < legend_data.length; x++) {
+				series_data.push({name : legend_data[x], type: 'line', data : []});
+			}
+			for (var x = 0; x < data.data.length; x++) {
+				var count = 0;
+				for (var y = 0; y < data.data[x].input_vars.length; y++) {
+					series_data[count].data.push(Object.values(data.data[x].input_vars[y])[0])
+					count++
+				}
+				for (var y = 0; y < data.data[x].output_vars.length; y++) {
+					series_data[count].data.push(Object.values(data.data[x].output_vars[y])[0])
+					count++
+				}
+			}
+			option.series = series_data;
+			myChart.setOption(option);
+		});
+	</script>
+	</body>
+</html>

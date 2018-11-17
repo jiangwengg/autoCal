@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>变量导入导出</title>
+	<link rel="stylesheet" href="../layui/css/layui.css">
+	<script src="../js/jquery-1.8.2.min.js"></script>
+	<script src="../layui/layui.js"></script>
+	<script src="../js/app.js"></script>
+	<style type="text/css">
+		.layui-table th {
+    		text-align: center;
+		}
+		.text-success {
+			color: #009688;
+		}
+		.text-err {
+			color: #FF5722;
+		}
+	</style>
+</head>
+<body class="layui-layout-body">
+	<div class="layui-layout layui-layout-admin">
+		<div style="padding: 15px;">
+			<div class="layui-btn-container">
+				<button id="exportbtn" class="layui-btn">导出xls文件</button>
+				<button type="button" class="layui-btn" id="importBtn">
+					<i class="layui-icon">&#xe67c;</i>导入xls文件
+				</button>
+			</div>
+		</div>
+		<h2>导入结果</h2>
+		<hr class="layui-bg-red">
+		<table class="layui-table" style="margin-top:0px">
+			<thead>
+				<tr>
+					<th>中文名</th>
+					<th>英文名</th>
+					<th>链接参数</th>
+					<th>参数类型</th>
+					<th>导入结果</th>
+				</tr>
+	  		</thead>
+			<tbody id="data-table">
+			</tbody>
+		</table>
+	</div>
+</body>
+<script type="text/javascript">
+	//处理文件下载
+	$('#exportbtn').click(function() {
+		window.open('/manager/var_to_file')
+	})
+
+	//处理文件上传
+	layui.use('upload', function(){
+		var upload = layui.upload;
+		//执行实例
+		var uploadInst = upload.render({
+			elem: '#importBtn',
+			url: '/manager/xls_upload',
+			accept : 'file',
+			done: function(data){
+				var html = '';
+				for (var x = 0; x < data.length; x++) {
+					html += '<tr>'
+					html += '<td>'
+					html += data[x].c_name
+					html += '</td>'
+					html += '<td>'
+					html += data[x].e_name
+					html += '</td>'
+					html += '<td>'
+					html += data[x].code
+					html += '</td>'
+					html += '<td>'
+					if (data[x].is_input) {
+						html += '输入变量'
+					} else {
+						html += '输出变量'
+					}
+					html += '</td>'
+					html += '<td>'
+					if (data[x].result == 'dup') {
+						html += '<span class="text-err">无法导入，链接参数重复<span>'
+					} else if (data[x].result == 'ok') {
+						html += '<span class="text-success">导入成功</span>'
+					}
+					html += '</td>'
+					html += '</tr>'
+				}
+				$('#data-table').html(html);
+			},
+			error: function(){
+				layer.msg('文件上传异常');
+			}
+		})
+	})
+</script>
+</html>
